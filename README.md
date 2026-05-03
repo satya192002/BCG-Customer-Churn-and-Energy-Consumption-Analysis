@@ -57,53 +57,53 @@ Two raw datasets form the basis of the project:
 
 **Churn distribution** — 9.7% of clients have churned against 90.3% retained, creating a significant class imbalance that needed to be addressed before modelling.
 
-![Churn Distribution](01_churn_distribution.png)
+![Churn Distribution](images/01_churn_distribution.png)
 
 **Sales channel analysis** — Churn rates vary meaningfully across sales channels. The highest-churn channel sits at 12.1%, while the `MISSING` channel — introduced to represent null values — carries a 7.6% churn rate, suggesting the absence of channel data is itself a predictive signal worth retaining.
 
-![Churn by Sales Channel](02_churn_by_sales_channel.png)
+![Churn by Sales Channel](images/02_churn_by_sales_channel.png)
 
 **Consumption distributions** — All four consumption columns (`cons_12m`, `cons_gas_12m`, `cons_last_month`, `imp_cons`) are heavily right-skewed with very long upper tails. The mass of records clusters near zero with extreme outliers extending to millions of kWh, confirming the need for log transformation before modelling.
 
-![Consumption Distributions](03_consumption_distributions.png)
+![Consumption Distributions](images/03_consumption_distributions.png)
 
 Boxplots grouped by churn class confirm the skewness extends across both retained and churned segments, with churned clients showing a tighter interquartile range and fewer extreme outliers.
 
-![Consumption Boxplot by Churn](04_consumption_boxplot_by_churn.png)
+![Consumption Boxplot by Churn](images/04_consumption_boxplot_by_churn.png)
 
 **Forecast variables** — All seven forecast columns show similar positive skewness. Boxplots reveal outliers at extreme values across all forecast fields, consistent with the raw consumption data.
 
-![Forecast Variables Boxplot](05_forecast_variables_boxplot.png)
+![Forecast Variables Boxplot](images/05_forecast_variables_boxplot.png)
 
 The distribution histograms show that `forecast_price_energy_off_peak` has a distinctive multimodal pattern, clustering at three price levels — an important structural characteristic of the pricing data.
 
-![Forecast Variable Distributions](06_forecast_distributions.png)
+![Forecast Variable Distributions](images/06_forecast_distributions.png)
 
 **Contract type (has_gas)** — Clients who also purchase gas from PowerCo churn at 8.2% vs. 10.1% for electricity-only clients — a ~2% difference that makes multi-product engagement a mild but consistent retention factor.
 
-![Churn by Gas Contract Type](07_churn_by_gas_contract.png)
+![Churn by Gas Contract Type](images/07_churn_by_gas_contract.png)
 
 **Margins** — Boxplots of `margin_gross_pow_ele`, `margin_net_pow_ele`, and `net_margin` reveal significant upper-end outliers. The IQR is narrow for all three, with most clients clustered at low margin values and a long extreme tail upward.
 
-![Margins Boxplot](08_margins_boxplot.png)
+![Margins Boxplot](images/08_margins_boxplot.png)
 
 **Subscribed power** — `pow_max` is heavily right-skewed, with the vast majority of clients subscribing to under 25 kW. A small number of industrial clients extend to 300 kW. Churn proportions appear consistent across power brackets.
 
-![Subscribed Power Distribution](09_subscribed_power_distribution.png)
+![Subscribed Power Distribution](images/09_subscribed_power_distribution.png)
 
 **Number of active products** — Churn rate is essentially flat across product counts 1–5 (~9.7–10%), dropping slightly for clients with 2 products (8.5%). Clients with 6+ products show 0% churn, though these are very small samples.
 
-![Churn by Number of Products](10_churn_by_num_products.png)
+![Churn by Number of Products](images/10_churn_by_num_products.png)
 
 **Pricing distributions** — `price_off_peak_var` has a distinctive multimodal distribution across several discrete price clusters, with a wide spread from 0.0 to 0.25. The boxplot confirms a tight IQR around 0.13–0.15 with upper outliers extending to 0.27.
 
-![Off-Peak Variable Price Distribution](11_price_off_peak_var_distribution.png)
+![Off-Peak Variable Price Distribution](images/11_price_off_peak_var_distribution.png)
 
-![Off-Peak Variable Price Boxplot](12_price_off_peak_var_boxplot.png)
+![Off-Peak Variable Price Boxplot](images/12_price_off_peak_var_boxplot.png)
 
 **Correlation across price features** — A correlation heatmap across all monthly price features reveals strong within-year clustering — December and January prices are highly correlated within the same year, which motivates the Dec–Jan delta feature engineered in the next phase.
 
-![Price Features Correlation](13_price_features_correlation.png)
+![Price Features Correlation](images/13_price_features_correlation.png)
 
 ---
 
@@ -123,11 +123,11 @@ All feature engineering was performed on the cleaned dataset merged with `price_
 
 **Log10 transformation** — Ten highly skewed numerical columns transformed using `np.log10(x + 1)`. Post-transformation distributions confirm stabilization — the three consumption variables now show near-normal distributions centered around 3–4, fully removing the extreme upper-tail distortion seen in EDA.
 
-![Log-Transformed Consumption Distributions](14_log_transformed_consumption.png)
+![Log-Transformed Consumption Distributions](images/14_log_transformed_consumption.png)
 
 **Correlation pruning** — A full correlation heatmap across all 72 engineered features was generated. Two variables (`num_years_antig` and `forecast_cons_year`) were dropped due to high inter-feature correlation. The heatmap also confirms the distinct block structure of the three price feature families.
 
-![Full Feature Correlation Heatmap](15_full_feature_correlation_heatmap.png)
+![Full Feature Correlation Heatmap](images/15_full_feature_correlation_heatmap.png)
 
 ---
 
@@ -141,19 +141,19 @@ The 90:10 target imbalance was addressed by applying SMOTE (Synthetic Minority O
 
 **Logistic Regression** (C = 100, solver = liblinear) — Despite 90.9% overall accuracy, the confusion matrix tells the real story: the model correctly identified only 3 out of 393 actual churners. It essentially learned to predict "no churn" for almost all clients.
 
-![Logistic Regression Confusion Matrix](16_logistic_regression_confusion_matrix.png)
+![Logistic Regression Confusion Matrix](images/16_logistic_regression_confusion_matrix.png)
 
 The ROC curve confirms weak discriminative power, with an AUC of 0.63 — barely above random. Logistic regression is fundamentally unsuitable for this imbalanced non-linear problem.
 
-![Logistic Regression ROC Curve](17_logistic_regression_roc_curve.png)
+![Logistic Regression ROC Curve](images/17_logistic_regression_roc_curve.png)
 
 **Random Forest** (1,000 estimators) — The ROC curve shows a substantial improvement over logistic regression, with the curve bowing meaningfully toward the top-left corner, indicating much stronger discrimination between churn and retention.
 
-![Random Forest ROC Curve](18_random_forest_roc_curve.png)
+![Random Forest ROC Curve](images/18_random_forest_roc_curve.png)
 
 **Feature Importance** — The Random Forest reveals a clear hierarchy: `cons_12m`, `forecast_meter_rent_12m`, `net_margin`, `margin_net_pow_ele`, and `forecast_cons_12m` are the top five drivers — all consumption and margin variables. Time-based features (`months_activ`, `months_modif_prod`) rank in the top 10. The Dec–Jan off-peak price difference feature (`offpeak_diff_dec_january_energy`) appears in the top half, while most price sensitivity features cluster in the lower half — directly challenging the original hypothesis.
 
-![Feature Importances](19_feature_importance.png)
+![Feature Importances](images/19_feature_importance.png)
 
 **Key conclusion on the hypothesis:** Price sensitivity is a weak-to-moderate contributor to churn, not the primary driver. Net margin, consumption volume, and relationship tenure are stronger signals.
 
@@ -165,15 +165,15 @@ A 20% discount was evaluated by sweeping probability cutoff values from 0.00 to 
 
 **All high-risk clients** — The revenue delta curve peaks at a cutoff of **0.50**, yielding a maximum benefit of **$2,296.55**. Below this cutoff, the cost of discounting non-churners who don't need it rapidly erodes and then eliminates the revenue benefit.
 
-![Revenue Delta — All High-Risk Clients](20_discount_revenue_delta_all_clients.png)
+![Revenue Delta — All High-Risk Clients](images/20_discount_revenue_delta_all_clients.png)
 
 **High-value targeting only (revenue > £500)** — When restricting discounts to clients above the churn threshold AND with baseline revenue above £500, the revenue delta curve shifts — the optimal cutoff drops to **0.22** with a maximum benefit of **$6,614.33**, nearly 3x the blanket strategy. However, blanket high-risk targeting ultimately produces similar total revenue because the discount cost doesn't scale with customer count in this formulation.
 
-![Revenue Delta — High Value Targeting](21_discount_revenue_delta_high_value.png)
+![Revenue Delta — High Value Targeting](images/21_discount_revenue_delta_high_value.png)
 
 **Model calibration** — The reliability curve shows the Random Forest is bimodally calibrated: for most clients predicted probability is near 0 (model is confident they won't churn), and for a small number it is near 1. The histogram confirms the probability distribution is heavily concentrated at the low end, with very few predictions in the 0.2–0.5 range. This step-function shape means the 0.50 cutoff is effectively separating two discrete groups rather than a smooth probability gradient.
 
-![Model Calibration Curve](22_model_calibration_curve.png)
+![Model Calibration Curve](images/22_model_calibration_curve.png)
 
 ---
 
